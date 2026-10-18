@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بطاقات الكلمات</title>
+  <meta name="description" content="تطبيق بطاقات بسيط لحفظ كلمات إنجليزي–عربي للمبتدئين">
+  <meta name="theme-color" content="#fff4ea">
+
+  <!-- خط عربي مرح (إذا ما في إنترنت، بيستخدم خط الجهاز) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+
+    <!-- العنوان -->
+    <header class="top">
+      <h1>بطاقات الكلمات <span aria-hidden="true">🎈</span></h1>
+      <p class="tagline">اختار تصنيف، اقلب البطاقة، واحفظ كلمة كلمة!</p>
+    </header>
+
+    <!-- التصنيفات (بتنبنى من الجافاسكربت) -->
+    <nav class="cats" id="cats" aria-label="التصنيفات"></nav>
+
+    <!-- شريط التقدّم -->
+    <section class="progress" aria-label="التقدّم">
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <!-- أدوات الجولة: الترتيب والخلط + كم باقي -->
+    <div class="toolbar">
+      <div class="mode" role="group" aria-label="ترتيب البطاقات">
+        <button class="mode-btn" id="orderBtn" type="button">📋 بالترتيب</button>
+        <button class="mode-btn" id="shuffleBtn" type="button">🔀 اخلط</button>
+      </div>
+      <span class="left" id="leftCount"></span>
+    </div>
+
+    <!-- البطاقة -->
+    <section class="stage">
+      <button class="card" id="card" type="button" aria-label="اكبس عشان تقلب البطاقة">
+        <div class="card-inner">
+          <!-- الوجه الأمامي: الكلمة بالإنجليزي -->
+          <div class="card-face card-front">
+            <span class="card-tag" id="frontTag"></span>
+            <span class="card-emoji" id="frontEmoji" aria-hidden="true"></span>
+            <span class="card-word" id="frontWord" dir="ltr" lang="en"></span>
+            <span class="card-hint">اكبس عشان تشوف المعنى 👆</span>
+          </div>
+          <!-- الوجه الخلفي: المعنى بالعربي -->
+          <div class="card-face card-back">
+            <span class="card-tag" id="backTag"></span>
+            <span class="card-emoji" id="backEmoji" aria-hidden="true"></span>
+            <span class="card-word" id="backWord"></span>
+            <span class="card-sub" id="backSub" dir="ltr" lang="en"></span>
+          </div>
+        </div>
+      </button>
+
+      <p class="empty" id="emptyMsg" hidden>ما في كلمات بهالتصنيف لسّا! ضيف كلمة من تحت 👇</p>
+
+      <!-- أزرار الجواب (بتبيّن بعد ما تقلب البطاقة) -->
+      <div class="answer" id="answer">
+        <button class="btn btn-know" id="knowBtn" type="button">✓ عرفتها</button>
+        <button class="btn btn-again" id="againBtn" type="button">↻ لسّا</button>
+      </div>
+
+      <p class="cheer" id="cheer" aria-live="polite"></p>
+    </section>
+
+    <!-- إضافة كلمة جديدة -->
+    <section class="panel">
+      <h2>➕ ضيف كلمة جديدة</h2>
+      <form id="addForm" class="add-form" autocomplete="off">
+        <label>
+          بالإنجليزي
+          <input id="enInput" type="text" dir="ltr" lang="en" placeholder="apple" maxlength="40" required>
+        </label>
+        <label>
+          بالعربي
+          <input id="arInput" type="text" placeholder="تفاحة" maxlength="40" required>
+        </label>
+        <label class="cat-field">
+          التصنيف
+          <select id="catSelect"></select>
+        </label>
+        <button class="btn btn-add" type="submit">ضيف</button>
+      </form>
+      <p class="form-msg" id="formMsg" aria-live="polite"></p>
+    </section>
+
+    <!-- قائمة الكلمات (حسب التصنيف المختار) -->
+    <details class="panel list-panel">
+      <summary>📚 الكلمات (<span id="listCount">0</span>)</summary>
+      <ul class="word-list" id="wordList"></ul>
+    </details>
+
+    <!-- تصفير التقدّم -->
+    <footer class="foot">
+      <button class="btn-link" id="resetBtn" type="button">ابدأ من جديد</button>
+    </footer>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
