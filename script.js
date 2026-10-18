@@ -56,6 +56,7 @@ const cardEl = $('card');
 const answerEl = $('answer');
 const cheerEl = $('cheer');
 const resetBtn = $('resetBtn');
+const summaryEl = $('summary');
 
 // ----- حالة التطبيق -----
 let state = loadState();   // { version, words: [...], settings: { cat, shuffle } }
@@ -63,6 +64,22 @@ let queue = [];            // البطاقات الباقية بالجولة ا�
 let current = null;        // البطاقة المعروضة هلّق
 let lastId = null;         // آخر بطاقة، عشان ما تتكرر ورا بعض
 let busy = false;          // بيمنع الكبس المتكرر وقت الحركة
+let inSummary = false;     // هل ملخّص الجولة معروض هلّق؟
+
+// ----- عدّاد نتائج الجولة -----
+let score = newScore(0);
+
+function newScore(size) {
+  return {
+    size,            // كم بطاقة بالجولة
+    know: 0,         // كم مرة «عرفتها»
+    again: 0,        // كم مرة «لسّا»
+    streak: 0,       // «عرفتها» ورا بعض هلّق
+    best: 0,         // أطول سلسلة بالجولة
+    firstTry: 0,     // بطاقات عرفتها من أول مرة شفتها
+    seen: new Set(), // البطاقات اللي انجاوبت بهالجولة
+  };
+}
 
 // =============================================
 // الحفظ والتحميل
@@ -237,7 +254,21 @@ function buildQueue() {
 
   // ما نبدأ بنفس البطاقة اللي خلصنا فيها
   if (queue.length > 1 && queue[0] === lastId) queue.push(queue.shift());
+
+  // كل جولة جديدة بتبدأ بعدّاد نظيف
+  score = newScore(queue.length);
+  updateScore();
 }
+
+// جولة جديدة بعد الملخّص
+function startRound() {
+  if (busy) return;
+  buildQueue();
+  cheerEl.textContent = allKnownInView() ? 'جولة مراجعة 🔁' : 'جولة جديدة! يلا 🎈';
+  goNext();
+}
+
+$('nextRoundBtn').addEventListener('click', startRound);
 
 // بيرجّع البطاقة الجاية من الجولة (وإذا خلصت، بيبدأ جولة جديدة)
 function takeNext() {
@@ -286,6 +317,8 @@ cardEl.addEventListener('animationend', () => cardEl.classList.remove('pop', 'sh
 // =============================================
 function showCard(word) {
   current = word || null;
+  inSummary = false;
+  summaryEl.hidden = true;
 
   cardEl.hidden = !current;
   $('emptyMsg').hidden = Boolean(current);
@@ -322,10 +355,13 @@ function goNext() {
   setTimeout(() => {
     cardEl.classList.add('instant');       // نرجّع البطاقة لوجهها بدون ما يبيّن المعنى الجديد
     setFlipped(false);
-    const { word, newRound } = takeNext();
-    showCard(word);
-    if (newRound && word && !cheerEl.textContent.includes('🎉')) {
-      cheerEl.textContent = allKnownInView() ? 'جولة مراجعة 🔁' : 'جولة جديدة! يلا 🎈';
+
+    // إذا خلصت البطاقات وجاوبنا على إشي، بنعرض ملخّص الجولة
+    queue = queue.filter((id) => findWord(id));
+    if (queue.length === 0 && score.seen.size > 0) {
+      showSummary();
+    } else {
+      showCard(takeNext().word);
     }
     void cardEl.offsetWidth;               // بيجبر المتصفح يطبّق التغيير قبل الحركة
     cardEl.classList.remove('instant', 'leaving', 'shuffling');
@@ -348,6 +384,20 @@ $('againBtn').addEventListener('click', () => answer(false));
 function answer(known) {
   if (busy || !current) return;
   const wasAllKnown = allKnownInView();
+
+  // تحديث عدّاد الجولة
+  const firstTime = !score.seen.has(current.id);
+  score.seen.add(current.id);
+  if (known) {
+    score.know++;
+    score.streak++;
+    score.best = Math.max(score.best, score.streak);
+    if (firstTime) score.firstTry++;
+  } else {
+    score.again++;
+    score.streak = 0;
+  }
+  updateScore(known ? ['scoreKnow', 'scoreStreak'] : ['scoreAgain', 'scoreStreak']);
 
   current.known = known;
   // «لسّا»: البطاقة بترجع بعد ٣ بطاقات
@@ -413,8 +463,116 @@ function updateToolbar() {
   $('shuffleBtn').setAttribute('aria-pressed', shuffle);
 
   const left = queue.length + (current ? 1 : 0);
-  $('leftCount').textContent = left ? 'باقي ' + left + ' بالجولة' : '';
+  const leftText = left ? 'باقي ' + left : '';
+  $('frontLeft').textContent = leftText;
+  $('backLeft').textContent = leftText;
 }
+
+// يحدّث أرقام العدّاد، ويعمل «نطّة» صغيرة للرقم اللي تغيّر
+function updateScore(bumpIds = []) {
+  $('scoreKnow').querySelector('b').textContent = score.know;
+  $('scoreAgain').querySelector('b').textContent = score.again;
+  $('scoreStreak').querySelector('b').textContent = score.streak;
+
+  bumpIds.forEach((id) => {
+    const el = $(id);
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  });
+}
+
+// =============================================
+// ملخّص الجولة
+// =============================================
+function showSummary() {
+  inSummary = true;
+  current = null;
+  cardEl.hidden = true;
+  $('emptyMsg').hidden = true;
+  setFlipped(false);
+
+  const cat = selectedCat();
+  summaryEl.classList.toggle('rainbow', cat.id === 'all');
+  if (cat.c1) applyColors(summaryEl, cat);
+
+  // النسبة = البطاقات اللي عرفتها من أول مرة ÷ عدد بطاقات الجولة
+  const size = Math.max(score.size, score.seen.size);
+  const pct = size ? Math.round((score.firstTry / size) * 100) : 0;
+  const starsCount = pct >= 90 ? 3 : pct >= 60 ? 2 : 1;
+
+  $('summaryTitle').textContent = allKnownInView()
+    ? (cat.id === 'all' ? '🎉 حفظت كل الكلمات!' : '🎉 حفظت كل كلمات «' + cat.name + '»!')
+    : '🏁 خلصت الجولة!';
+
+  const stars = $('stars');
+  stars.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const s = document.createElement('span');
+    s.textContent = '⭐';
+    if (i >= starsCount) s.className = 'off';
+    stars.append(s);
+  }
+
+  $('summaryLine').textContent = 'عرفت ' + score.firstTry + ' من ' + size + ' من أول مرة (' + pct + '%)';
+  $('statFirst').textContent = score.firstTry + '/' + size;
+  $('statAgain').textContent = score.again;
+  $('statBest').textContent = score.best;
+
+  cheerEl.textContent = '';   // العنوان بالملخّص بيكفي
+  summaryEl.hidden = false;
+  updateToolbar();
+}
+
+// =============================================
+// اختصارات الكيبورد
+// مسافة: اقلب البطاقة · →: عرفتها · ←: لسّا
+// =============================================
+document.addEventListener('keydown', (e) => {
+  // ما نتدخّل وقت الكتابة بخانة، أو إذا في Ctrl/Alt/Cmd
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  const isSpace = e.code === 'Space' || e.key === ' ';
+
+  // بالملخّص: مسافة أو Enter بتبدأ جولة جديدة
+  if (inSummary) {
+    if (isSpace || e.key === 'Enter') {
+      e.preventDefault();
+      startRound();
+    }
+    return;
+  }
+
+  if (!current) return;
+
+  if (isSpace) {
+    e.preventDefault();   // بيمنع نزول الصفحة، وبيمنع الزر المحدّد ينكبس كمان
+    if (!busy) setFlipped(!cardEl.classList.contains('flipped'));
+    return;
+  }
+
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    // إذا البطاقة لسّا مش مقلوبة، أول ضغطة بتقلبها
+    if (!cardEl.classList.contains('flipped')) {
+      if (!busy) setFlipped(true);
+      return;
+    }
+    // الأسهم زي مكان الأزرار: → عرفتها (يمين)، ← لسّا (يسار)
+    const btn = $(e.key === 'ArrowRight' ? 'knowBtn' : 'againBtn');
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 150);
+    answer(e.key === 'ArrowRight');
+  }
+});
+
+// الزر المحدّد ما بينكبس بالمسافة (إحنا بنتعامل معها فوق)
+document.addEventListener('keyup', (e) => {
+  const tag = e.target.tagName;
+  if ((e.code === 'Space' || e.key === ' ') && tag === 'BUTTON') e.preventDefault();
+});
 
 function renderList() {
   const list = $('wordList');
@@ -508,9 +666,10 @@ $('addForm').addEventListener('submit', (e) => {
 
   // إذا الكلمة من التصنيف المعروض، بندخّلها بالجولة الحالية
   const inView = state.settings.cat === 'all' || state.settings.cat === catId;
-  if (inView) {
+  if (inView && !inSummary) {
     const pos = state.settings.shuffle ? Math.floor(Math.random() * (queue.length + 1)) : queue.length;
     queue.splice(pos, 0, word.id);
+    score.size++;
   }
   saveState();
 
@@ -521,7 +680,7 @@ $('addForm').addEventListener('submit', (e) => {
   arInput.value = '';
   enInput.focus();
 
-  if (!current && inView) showCard(takeNext().word);
+  if (!current && inView && !inSummary) showCard(takeNext().word);
   updateAll();
 });
 

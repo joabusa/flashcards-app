@@ -34,13 +34,17 @@
       </div>
     </section>
 
-    <!-- أدوات الجولة: الترتيب والخلط + كم باقي -->
+    <!-- أدوات الجولة: الترتيب والخلط + عدّاد نتائج الجولة -->
     <div class="toolbar">
       <div class="mode" role="group" aria-label="ترتيب البطاقات">
         <button class="mode-btn" id="orderBtn" type="button">📋 بالترتيب</button>
         <button class="mode-btn" id="shuffleBtn" type="button">🔀 اخلط</button>
       </div>
-      <span class="left" id="leftCount"></span>
+      <div class="score" aria-label="نتيجة الجولة">
+        <span class="pill pill-know" id="scoreKnow" title="عرفتها بهالجولة">✓ <b>0</b></span>
+        <span class="pill pill-again" id="scoreAgain" title="لسّا بهالجولة">↻ <b>0</b></span>
+        <span class="pill pill-streak" id="scoreStreak" title="سلسلة صح ورا بعض">🔥 <b>0</b></span>
+      </div>
     </div>
 
     <!-- البطاقة -->
@@ -50,13 +54,18 @@
           <!-- الوجه الأمامي: الكلمة بالإنجليزي -->
           <div class="card-face card-front">
             <span class="card-tag" id="frontTag"></span>
+            <span class="card-left" id="frontLeft"></span>
             <span class="card-emoji" id="frontEmoji" aria-hidden="true"></span>
             <span class="card-word" id="frontWord" dir="ltr" lang="en"></span>
-            <span class="card-hint">اكبس عشان تشوف المعنى 👆</span>
+            <span class="card-hint">
+              <span class="only-touch">اكبس عشان تشوف المعنى 👆</span>
+              <span class="only-keys">اكبس أو اضغط <kbd>مسافة</kbd> عشان تشوف المعنى</span>
+            </span>
           </div>
           <!-- الوجه الخلفي: المعنى بالعربي -->
           <div class="card-face card-back">
             <span class="card-tag" id="backTag"></span>
+            <span class="card-left" id="backLeft"></span>
             <span class="card-emoji" id="backEmoji" aria-hidden="true"></span>
             <span class="card-word" id="backWord"></span>
             <span class="card-sub" id="backSub" dir="ltr" lang="en"></span>
@@ -66,10 +75,23 @@
 
       <p class="empty" id="emptyMsg" hidden>ما في كلمات بهالتصنيف لسّا! ضيف كلمة من تحت 👇</p>
 
+      <!-- ملخّص نتيجة الجولة (بيطلع لما تخلص الجولة) -->
+      <div class="summary" id="summary" hidden>
+        <h2 class="summary-title" id="summaryTitle">🏁 خلصت الجولة!</h2>
+        <div class="stars" id="stars" aria-hidden="true"></div>
+        <p class="summary-line" id="summaryLine"></p>
+        <div class="stats">
+          <div class="stat stat-first"><b id="statFirst">0</b><span>من أول مرة 🎯</span></div>
+          <div class="stat stat-again"><b id="statAgain">0</b><span>مرّات «لسّا» ↻</span></div>
+          <div class="stat stat-best"><b id="statBest">0</b><span>أطول سلسلة 🔥</span></div>
+        </div>
+        <button class="btn btn-next" id="nextRoundBtn" type="button">🔁 جولة جديدة <kbd class="only-keys">مسافة</kbd></button>
+      </div>
+
       <!-- أزرار الجواب (بتبيّن بعد ما تقلب البطاقة) -->
       <div class="answer" id="answer">
-        <button class="btn btn-know" id="knowBtn" type="button">✓ عرفتها</button>
-        <button class="btn btn-again" id="againBtn" type="button">↻ لسّا</button>
+        <button class="btn btn-know" id="knowBtn" type="button">✓ عرفتها <kbd class="only-keys">→</kbd></button>
+        <button class="btn btn-again" id="againBtn" type="button">↻ لسّا <kbd class="only-keys">←</kbd></button>
       </div>
 
       <p class="cheer" id="cheer" aria-live="polite"></p>
@@ -104,6 +126,9 @@
 
     <!-- تصفير التقدّم -->
     <footer class="foot">
+      <p class="keys-help only-keys">
+        ⌨️ <kbd>مسافة</kbd> اقلب البطاقة · <kbd>→</kbd> عرفتها · <kbd>←</kbd> لسّا
+      </p>
       <button class="btn-link" id="resetBtn" type="button">ابدأ من جديد</button>
     </footer>
 
